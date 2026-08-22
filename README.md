@@ -48,18 +48,25 @@ codex --profile quick-gateway
    ```bash
    ssh -N -L 4000:127.0.0.1:4000 <vm-host>
    ```
-2. Point Claude Code at `http://127.0.0.1:4000`. Two ways:
-   - **[claude-profile-manager](https://github.com/JakubKontra/claude-profile-manager)**:
-     merge [`clients/claude-profiles.snippet.toml`](clients/claude-profiles.snippet.toml)
-     into `~/.claude-profiles/config.toml`, launch `claude-zen`.
-   - **Plain**: put in project `.claude/settings.json`:
-     ```json
-     { "env": { "ANTHROPIC_BASE_URL": "http://127.0.0.1:4000",
-                "ANTHROPIC_AUTH_TOKEN": "quick-gateway-local" } }
-     ```
-   The token is a dummy — the gateway is auth-free because it listens on
-   loopback only; reach requires being on the VM or through authenticated SSH.
-3. Pick any model: `claude --model ox-alpha-free` (or set it in the profile).
+2. Install the launcher (needs python3 + jq-less; idempotent):
+   ```bash
+   ./clients/install-claude-zen.sh
+   ```
+3. Launch: `claude-zen` — a full Claude Code session on `ox-alpha-free`
+   (or any gateway model via `claude-zen --model kimi-k3`). Everything else —
+   permissions, plugins, hooks, theme, token limits — is replicated from your
+   main settings at install time.
+
+Why a `--settings` wrapper instead of env vars or cpm alone? Current Claude
+Code merges the legacy `~/.claude/settings.json` over `CLAUDE_CONFIG_DIR`
+profiles and over process env, so its `ANTHROPIC_*` block silently wins and
+requests never reach the gateway. `--settings` outranks the user scope and
+reliably overrides it (verified). [claude-profile-manager](https://github.com/JakubKontra/claude-profile-manager)
+remains handy for managing the profile files themselves.
+
+The auth token is a dummy — the gateway is auth-free because it listens on
+loopback only; reach requires being on the VM or through authenticated SSH.
+
 
 ## Models exposed
 
@@ -95,5 +102,5 @@ install.sh                        idempotent installer (uv-native)
 gateway/config.yaml               LiteLLM model catalog
 gateway/quick-gateway.service.template   systemd unit (__USER__/__HOME__ rendered)
 clients/codex-quick-gateway.config.toml  codex profile overlay
-clients/claude-profiles.snippet.toml     cpm profile for Claude Code
+clients/install-claude-zen.sh            Claude Code launcher installer
 ```

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # quick-gateway installer — idempotent, uv-native, distro-blind.
 # Installs LiteLLM under ~/.local/share/quick-gateway, runtime config under
-# ~/.config/quick-gateway, wires a codex profile overlay, and prints the
-# systemd commands that make it permanent.
+# ~/.config/quick-gateway, wires a codex profile overlay, and (interactive or
+# --system) installs the always-on systemd service via sudo.
 #
 # Secrets: prompts once for OPENCODE_API_KEY, stores it chmod-600 in
 # ~/.config/quick-gateway/gateway.env (server-side only; clients need nothing).
@@ -68,14 +68,44 @@ if [ -d "$HOME/.codex" ]; then
     log "installed ~/.codex/quick-gateway.config.toml  (use: codex --profile quick-gateway)"
 fi
 
+# --- system service (always-on; needs sudo) ---------------------------------
+install_system_service() {
+    # clear any user-space instance we started earlier - it holds port 4000
+    pkill -f "$RUNTIME_HOME/venv/bin/litellm" 2>/dev/null || true
+    sleep 1
+    sudo cp "$CONFIG_HOME/quick-gateway.service" /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now quick-gateway
+    sleep 2
+    if systemctl is-active --quiet quick-gateway; then
+        log "service quick-gateway active ($(curl -s -m5 -o /dev/null -w '%{http_code}' http://127.0.0.1:4000/v1/models) on :4000)"
+    else
+        echo "WARNING: unit installed but not active - check: journalctl -u quick-gateway"
+        return 1
+    fi
+}
+
+MANUAL_STEPS="To make the gateway permanent, run:
+  sudo cp $CONFIG_HOME/quick-gateway.service /etc/systemd/system/
+  sudo systemctl daemon-reload && sudo systemctl enable --now quick-gateway"
+
+if [ "${1:-}" = "--system" ]; then
+    install_system_service || echo "$MANUAL_STEPS"
+elif [ -t 0 ] && [ -t 1 ]; then
+    printf 'Install system-level systemd service now (needs sudo)? [Y/n] '
+    read -r ANSWER
+    case "$ANSWER" in
+        n*|N*) echo "$MANUAL_STEPS" ;;
+        *)     install_system_service || echo "$MANUAL_STEPS" ;;
+    esac
+else
+    echo "Non-interactive shell detected - skipping service install."
+    echo "$MANUAL_STEPS"
+fi
+
 cat <<EOF
 
-Done. To make the gateway permanent (system-level, always-on):
-
-  sudo cp $CONFIG_HOME/quick-gateway.service /etc/systemd/system/
-  sudo systemctl daemon-reload && sudo systemctl enable --now quick-gateway
-
 Laptop / remote Claude Code setup:
-  see clients/claude-profiles.snippet.toml and the README "Laptop setup" section.
+  run clients/install-claude-zen.sh there (see README "Laptop / remote Claude Code").
 
 EOF
