@@ -1,0 +1,4 @@
+litellm.pid
+*.pid
+litellm.log
+*.env
