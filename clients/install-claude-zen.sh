@@ -35,8 +35,8 @@ env.update({
     "ANTHROPIC_BASE_URL": "http://127.0.0.1:4000",
     "ANTHROPIC_AUTH_TOKEN": "quick-gateway-local",   # dummy; gateway is auth-free
     "ANTHROPIC_API_KEY": "",
-    "ANTHROPIC_MODEL": "ox-alpha-free",
-    "CLAUDE_CODE_SUBAGENT_MODEL": "ox-alpha-free",
+    "ANTHROPIC_MODEL": "ox-alpha-free[1m]",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "ox-alpha-free[1m]",
     "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY": "1",
     "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "131072",
 })
