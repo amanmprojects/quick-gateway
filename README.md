@@ -23,9 +23,9 @@ including tool calls.
 
 ```bash
 git clone https://github.com/amanmprojects/quick-gateway && cd quick-gateway
-./install.sh          # prompts once for OPENCODE_API_KEY (stored chmod-600)
-sudo cp ~/.config/quick-gateway/quick-gateway.service /etc/systemd/system/
-sudo systemctl daemon-reload && sudo systemctl enable --now quick-gateway
+./install.sh            # prompts for OPENCODE_API_KEY (chmod-600), then asks
+                        # to install the system service via sudo.
+./install.sh --system   # same, without the service-install prompt (for scripts)
 curl -s http://127.0.0.1:4000/v1/models | head -c 200   # sanity check
 ```
 
