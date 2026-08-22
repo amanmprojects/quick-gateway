@@ -1,0 +1,19 @@
+# Usage: codex --profile quick-gateway
+#
+# Self-contained overlay: the provider definition AND selection live here,
+# so ~/.codex/config.toml stays completely untouched.
+#
+# Requires the quick-gateway service listening on 127.0.0.1:4000
+# (https://github.com/amanmprojects/quick-gateway).
+# On a remote machine, first open the tunnel:
+#   ssh -N -L 4000:127.0.0.1:4000 <vm-host>
+
+model = "ox-alpha-free"
+model_provider = "quick-gateway"
+web_search = "disabled"
+
+[model_providers.quick-gateway]
+name = "quick-gateway (OpenCode Zen)"
+base_url = "http://127.0.0.1:4000/v1"
+wire_api = "responses"
+# deliberately no env_key: the gateway is auth-free on loopback by design

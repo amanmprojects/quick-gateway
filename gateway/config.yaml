@@ -1,0 +1,141 @@
+# quick-gateway — LiteLLM configuration
+#
+# Routes every OpenCode Zen chat-completions-class model so that BOTH
+# OpenAI-Responses clients (codex CLI) and Anthropic-Messages clients
+# (Claude Code) can reach them through one local endpoint.
+#
+# `model: openai/<name>` points at the OpenAI-compatible upstream;
+# `use_chat_completions_api: true` makes LiteLLM bridge codex's
+# /v1/responses requests onto that chat API. The upstream key comes from
+# the environment (gateway.env). No master_key: loopback-only by design.
+
+model_list:
+  - model_name: ox-alpha-free
+    litellm_params:
+      model: openai/ox-alpha-free
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: glm-5
+    litellm_params:
+      model: openai/glm-5
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: glm-5.1
+    litellm_params:
+      model: openai/glm-5.1
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: glm-5.2
+    litellm_params:
+      model: openai/glm-5.2
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: glm-5.3
+    litellm_params:
+      model: openai/glm-5.3
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: kimi-k3
+    litellm_params:
+      model: openai/kimi-k3
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: kimi-k2.7-code
+    litellm_params:
+      model: openai/kimi-k2.7-code
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: kimi-k2.6
+    litellm_params:
+      model: openai/kimi-k2.6
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: kimi-k2.5
+    litellm_params:
+      model: openai/kimi-k2.5
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: deepseek-v4-pro
+    litellm_params:
+      model: openai/deepseek-v4-pro
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: deepseek-v4-flash
+    litellm_params:
+      model: openai/deepseek-v4-flash
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: deepseek-v4-flash-vision-exp
+    litellm_params:
+      model: openai/deepseek-v4-flash-vision-exp
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: mimo-v2-pro
+    litellm_params:
+      model: openai/mimo-v2-pro
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: mimo-v2-omni
+    litellm_params:
+      model: openai/mimo-v2-omni
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: mimo-v2.5-pro
+    litellm_params:
+      model: openai/mimo-v2.5-pro
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: mimo-v2.5
+    litellm_params:
+      model: openai/mimo-v2.5
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: hy3
+    litellm_params:
+      model: openai/hy3
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+  - model_name: hy3-preview
+    litellm_params:
+      model: openai/hy3-preview
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_API_KEY
+      use_chat_completions_api: true
+
+litellm_settings:
+  # silently drop client params a chat-completions backend cannot express
+  drop_params: true
