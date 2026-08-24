@@ -39,6 +39,9 @@ env.update({
     "CLAUDE_CODE_SUBAGENT_MODEL": "ox-alpha-free[1m]",
     "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY": "1",
     "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "131072",
+    # catalog names aren't first-party Anthropic models; without this Claude
+    # Code warns "unrecognized model" on every turn
+    "CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT": "1",
 })
 json.dump(d, open(p, "w"), indent=2)
 PY

@@ -94,6 +94,17 @@ Not routed here (already natively compatible elsewhere):
 - **Key rotation**: edit `~/.config/quick-gateway/gateway.env`, then
   `sudo systemctl restart quick-gateway`. Clients need no changes.
 - **Gateway logs**: `journalctl -u quick-gateway` (system service).
+- **Empty responses from `claude-zen`**: Claude Code always sends its tool
+  list, so a model that chokes on `tools` fails only under Claude Code while
+  plain text requests succeed. If a Zen backend regresses to this (symptom:
+  silent empty stream or 503 "Endpoint is unavailable"), switch models with
+  `claude-zen --model glm-5` and report upstream. (`ox-alpha-free` had this
+  issue historically but handles tools again as of 2026-08.)
+- **Anthropic `/v1/messages` routing**: litellm 1.97 routes Messages requests
+  for `openai/*` models via its Responses-API adapter unless
+  `use_chat_completions_url_for_anthropic_messages: true` is set in
+  `litellm_settings` (it is — see AGENTS.md constraint 7; removing it makes
+  non-streaming responses come back with empty content).
 
 ## Layout
 
