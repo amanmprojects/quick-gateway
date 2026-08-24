@@ -18,6 +18,12 @@ VENV="$RUNTIME_HOME/venv"
 
 log() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 
+# --- baseline tools ---------------------------------------------------------
+for tool in curl tar; do
+    command -v "$tool" >/dev/null 2>&1 \
+        || { echo "missing required tool: $tool (install it, then re-run)"; exit 1; }
+done
+
 # --- uv -------------------------------------------------------------------
 if command -v uv >/dev/null 2>&1; then
     UV="$(command -v uv)"
@@ -57,16 +63,16 @@ else
 fi
 
 # --- systemd unit (rendered; NOT installed - sudo lines printed below) ----
-sed -e "s|__USER__|$USER|" -e "s|__HOME__|$HOME|g" \
+sed -e "s|__USER__|${USER:-$(id -un)}|" -e "s|__HOME__|$HOME|g" \
     "$REPO_ROOT/gateway/quick-gateway.service.template" \
     > "$CONFIG_HOME/quick-gateway.service"
 log "rendered $CONFIG_HOME/quick-gateway.service"
 
 # --- codex overlay --------------------------------------------------------
-if [ -d "$HOME/.codex" ]; then
-    cp "$REPO_ROOT/clients/codex-quick-gateway.config.toml" "$HOME/.codex/quick-gateway.config.toml"
-    log "installed ~/.codex/quick-gateway.config.toml  (use: codex --profile quick-gateway)"
-fi
+# Create ~/.codex if absent: a fresh VM shouldn't silently skip the profile.
+mkdir -p "$HOME/.codex"
+cp "$REPO_ROOT/clients/codex-quick-gateway.config.toml" "$HOME/.codex/quick-gateway.config.toml"
+log "installed ~/.codex/quick-gateway.config.toml  (use: codex --profile quick-gateway)"
 
 # --- system service (always-on; needs sudo) ---------------------------------
 install_system_service() {
@@ -106,6 +112,7 @@ fi
 cat <<EOF
 
 Laptop / remote Claude Code setup:
-  run clients/install-claude-zen.sh there (see README "Laptop / remote Claude Code").
+  on the laptop:  curl -fsSL <raw-repo-url>/clients/tunnel.sh | bash -s -- <vm-host>
+  (or run clients/tunnel.sh from a clone; see README "Laptop / remote Claude Code").
 
 EOF

@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # Install the `claude-zen` launcher for Claude Code on any machine that can
-# reach the quick-gateway (locally, or via: ssh -N -L 4000:127.0.0.1:4000 <vm>).
+# reach the quick-gateway (locally, or via: clients/tunnel.sh <vm-host>).
 #
 # Creates:
-#   ~/.claude-profiles/zen/settings.json   profile settings (gateway env +
-#                                          everything copied from your main
-#                                          ~/.claude/settings.json)
+#   ~/.claude-profiles/zen/settings.json   self-contained profile settings
 #   ~/.local/bin/claude-zen                launcher
+#
+# The profile is built from scratch — no dependency on an existing
+# ~/.claude/settings.json, plugins, MCP servers, or hooks — so it works on a
+# fresh laptop with nothing but Claude Code installed.
 #
 # Why --settings instead of a plain env profile? Current Claude Code merges
 # the legacy ~/.claude/settings.json over CLAUDE_CONFIG_DIR-scoped profiles,
@@ -17,21 +19,15 @@ set -euo pipefail
 PROFILE_DIR="$HOME/.claude-profiles/zen"
 BIN="$HOME/.local/bin"
 
+command -v python3 >/dev/null 2>&1 || { echo "python3 is required"; exit 1; }
 mkdir -p "$PROFILE_DIR" "$BIN"
 
 if [ -f "$PROFILE_DIR/settings.json" ]; then
-    echo "keeping existing $PROFILE_DIR/settings.json"
+    echo "keeping existing $PROFILE_DIR/settings.json (delete it to regenerate)"
 else
-    # start from the main settings (permissions, plugins, hooks, theme ...)
-    # if present, then swap provider config to the gateway
-    cp "$HOME/.claude/settings.json" "$PROFILE_DIR/settings.json" 2>/dev/null || echo '{}' \
-        | cat > "$PROFILE_DIR/settings.json"
     python3 - "$PROFILE_DIR/settings.json" <<'PY'
 import json, sys
-p = sys.argv[1]
-d = json.load(open(p))
-env = d.setdefault("env", {})
-env.update({
+env = {
     "ANTHROPIC_BASE_URL": "http://127.0.0.1:4000",
     "ANTHROPIC_AUTH_TOKEN": "quick-gateway-local",   # dummy; gateway is auth-free
     "ANTHROPIC_API_KEY": "",
@@ -42,8 +38,8 @@ env.update({
     # catalog names aren't first-party Anthropic models; without this Claude
     # Code warns "unrecognized model" on every turn
     "CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT": "1",
-})
-json.dump(d, open(p, "w"), indent=2)
+}
+json.dump({"env": env}, open(sys.argv[1], "w"), indent=2)
 PY
     echo "wrote $PROFILE_DIR/settings.json"
 fi

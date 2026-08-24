@@ -44,18 +44,33 @@ codex --profile quick-gateway
 
 ## Laptop / remote Claude Code
 
-1. Keep a tunnel alive to the VM:
-   ```bash
-   ssh -N -L 4000:127.0.0.1:4000 <vm-host>
-   ```
-2. Install the launcher (needs python3 + jq-less; idempotent):
+One command from any laptop (needs only `ssh` + `curl`):
+
+```bash
+# from a clone:
+clients/tunnel.sh <vm-host>            # open tunnel + verify gateway reachable
+clients/tunnel.sh <vm-host> --claude   # ...and install the claude-zen launcher
+clients/tunnel.sh --status             # just check reachability
+```
+
+or without cloning, straight off GitHub:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/amanmprojects/quick-gateway/master/clients/tunnel.sh \
+  | bash -s -- <vm-host> --claude
+```
+
+`tunnel.sh` is idempotent: if :4000 already answers locally it does nothing,
+otherwise it opens `ssh -fN -L 4000:127.0.0.1:4000 <vm-host>` and re-checks.
+
+1. Install the launcher (idempotent; needs python3 + Claude Code):
    ```bash
    ./clients/install-claude-zen.sh
    ```
-3. Launch: `claude-zen` — a full Claude Code session on `ox-alpha-free`
-   (or any gateway model via `claude-zen --model kimi-k3`). Everything else —
-   permissions, plugins, hooks, theme, token limits — is replicated from your
-   main settings at install time.
+2. Launch: `claude-zen` — a full Claude Code session on `ox-alpha-free`
+   (or any gateway model via `claude-zen --model kimi-k3`). The profile is
+   self-contained (`~/.claude-profiles/zen/settings.json`) and depends on
+   nothing else on the machine — no plugins, MCP servers, or hooks required.
 
 Why a `--settings` wrapper instead of env vars or cpm alone? Current Claude
 Code merges the legacy `~/.claude/settings.json` over `CLAUDE_CONFIG_DIR`
@@ -114,4 +129,5 @@ gateway/config.yaml               LiteLLM model catalog
 gateway/quick-gateway.service.template   systemd unit (__USER__/__HOME__ rendered)
 clients/codex-quick-gateway.config.toml  codex profile overlay
 clients/install-claude-zen.sh            Claude Code launcher installer
+clients/tunnel.sh                        laptop one-command SSH tunnel + reachability check
 ```
