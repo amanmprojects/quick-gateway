@@ -45,6 +45,12 @@ clients/install-claude-zen.sh           Claude Code launcher installer (--settin
 6. **Secrets stay out of git.** The Zen key lives in
    `~/.config/quick-gateway/gateway.env` (chmod 600), created interactively at
    install time. `.gitignore` excludes `*.env`, `*.pid`, logs.
+7. **`use_chat_completions_url_for_anthropic_messages: true` must stay in
+   `litellm_settings`.** Without it, litellm 1.97 routes `/v1/messages` for
+   `openai/*` models through its Responses-API adapter first (Anthropic →
+   Responses → chat completions); that double hop returns `"content": []` on
+   non-streaming calls even when the upstream generated tokens. The setting
+   switches to the direct Anthropic → chat-completions conversion.
 
 ## Testing changes
 

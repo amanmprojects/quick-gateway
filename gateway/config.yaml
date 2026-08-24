@@ -139,3 +139,8 @@ model_list:
 litellm_settings:
   # silently drop client params a chat-completions backend cannot express
   drop_params: true
+  # /v1/messages: litellm 1.97 routes openai/* models through its Responses
+  # API adapter first (Anthropic -> Responses -> chat completions); that double
+  # hop returns empty content once tools/system are present. Route straight to
+  # chat completions instead.
+  use_chat_completions_url_for_anthropic_messages: true
