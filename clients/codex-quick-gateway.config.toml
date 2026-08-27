@@ -5,8 +5,10 @@
 #
 # Requires the quick-gateway service listening on 127.0.0.1:4000
 # (https://github.com/amanmprojects/quick-gateway).
+# Default port 4000; override via QUICK_GATEWAY_PORT / --port:
+#   QUICK_GATEWAY_PORT=5000 ./install.sh --port 5000
 # On a remote machine, first open the tunnel:
-#   ssh -N -L 4000:127.0.0.1:4000 <vm-host>
+#   ssh -N -L 127.0.0.1:4000:127.0.0.1:4000 <vm-host>
 
 model = "ox-alpha-free"
 model_provider = "quick-gateway"
