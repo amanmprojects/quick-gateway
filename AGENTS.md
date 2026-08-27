@@ -13,24 +13,28 @@ full picture; `install.sh` is the single entry point for setup.
 
 ```
 install.sh                              idempotent installer (uv-native)
-gateway/config.yaml                     LiteLLM model catalog (18 Zen chat-class models)
-gateway/quick-gateway.service.template  systemd unit (__USER__/__HOME__ placeholders)
+gateway/config.yaml                     LiteLLM model catalog (18 Zen chat-class models, YAML anchors)
+gateway/quick-gateway.service.template  systemd unit (__USER__/__HOME__/__PORT__ placeholders, hardened)
 clients/codex-quick-gateway.config.toml self-contained codex profile overlay
 clients/install-claude-zen.sh           Claude Code launcher installer (--settings wrapper)
+clients/tunnel.sh                       laptop one-command SSH tunnel + health check
+.github/workflows/lint.yml              CI (shellcheck, yaml, dry-run)
+LICENSE                                 MIT
 ```
 
 ## Non-obvious constraints — do not break these
 
-1. **fastapi pin.** litellm 1.97.x imports FastAPI APIs removed in newer
+1. **fastapi + litellm pin.** litellm 1.97.x imports FastAPI APIs removed in newer
    releases (`get_flat_dependant`); its own declared floor (`>=0.136.3`) is the
-   last good version. `install.sh` pins `fastapi==0.136.3`. If you bump
-   litellm: re-check whether the pin can move by running
+   last good version. `install.sh` pins `litellm[proxy]==1.97.*` and `fastapi==0.136.3`.
+   If you bump litellm: re-check whether the pin can move by running
    `python -c "from litellm.proxy import proxy_server"` after install.
-2. **Model catalog entries use clean names + flag.** Each entry must be
+2. **Model catalog entries use clean names + flag + anchor.** Each entry must be
    `model: openai/<name>` with `use_chat_completions_api: true` in
-   `litellm_params`. Do NOT use the `openai/chat_completions/<model>` id form —
-   its marker only gets stripped on `/v1/responses`; Anthropic and plain-chat
-   ingresses forward it verbatim and upstream rejects it.
+   `litellm_params`, merged from `x-zen-defaults: &zen_defaults`. Do NOT use the
+   `openai/chat_completions/<model>` id form — its marker only gets stripped on
+   `/v1/responses`; Anthropic and plain-chat ingresses forward it verbatim and
+   upstream rejects it.
 3. **Auth-free loopback is deliberate.** No master_key; binding is
    `127.0.0.1`. Clients carry dummy tokens (`quick-gateway-local`). Don't add
    auth without also designing key distribution to clients.
@@ -51,12 +55,18 @@ clients/install-claude-zen.sh           Claude Code launcher installer (--settin
    Responses → chat completions); that double hop returns `"content": []` on
    non-streaming calls even when the upstream generated tokens. The setting
    switches to the direct Anthropic → chat-completions conversion.
+8. **Port is templated.** Default 4000, override via `QUICK_GATEWAY_PORT` env or
+   `--port`. The systemd template uses `__PORT__` placeholder; `install.sh` and
+   `tunnel.sh`/`install-claude-zen.sh` all respect `QUICK_GATEWAY_PORT`. If you
+   change the default, update unit template, client templates, and README together.
 
 ## Testing changes
 
-There is no CI; verify manually after touching gateway config or installer:
+CI runs `bash -n`, `shellcheck`, `yaml.safe_load` + model count, and
+`./install.sh --dry-run`. For manual verify after touching gateway config or installer:
 
 ```bash
+./install.sh --dry-run --api-key dummy12345678   # preview without side effects
 ./install.sh --system                 # re-render + restart service (needs sudo)
 curl -s http://127.0.0.1:4000/v1/models | head -c 200          # catalog lists
 # Responses ingress (codex path):
@@ -69,6 +79,8 @@ curl -s http://127.0.0.1:4000/v1/messages -H 'Content-Type: application/json' \
 # end-to-end client checks:
 codex --profile quick-gateway exec "Reply with exactly: ok"
 claude-zen -p "Reply with exactly: ok"
+# custom port:
+QUICK_GATEWAY_PORT=5000 ./install.sh --dry-run --port 5000 --api-key dummy
 ```
 
 Gateway logs: `journalctl -u quick-gateway -f`. A healthy request shows
@@ -79,6 +91,6 @@ client errors means a client-side precedence problem**, not a gateway problem.
 
 - Keep the README's topology diagram and troubleshooting section in sync with
   any behavior change.
-- Ports: default 4000; if you change it, change unit template, both client
+- Ports: default 4000 via `QUICK_GATEWAY_PORT`/`--port`; template uses `__PORT__`; if you change default, update unit template, both client
   templates, and README together.
 - Commit messages: imperative mood, explain *why* when non-obvious.

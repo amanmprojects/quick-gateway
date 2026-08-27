@@ -9,8 +9,8 @@ chat-completions models through one local endpoint.
 codex ──────────────► /v1/responses ─┐
                                      │   quick-gateway    chat completions
 Claude Code ────────► /v1/messages ──┼─► (LiteLLM) ─────────► OpenCode Zen
-                                     │   127.0.0.1:4000      /zen/go/v1
-any OpenAI client ──► /v1/chat/…  ───┘
+                                     │   127.0.0.1:4000*     /zen/go/v1
+any OpenAI client ──► /v1/chat/…  ───┘     *QUICK_GATEWAY_PORT
 ```
 
 Why: Zen's Go plan serves different models over different wire protocols —
@@ -26,11 +26,19 @@ git clone https://github.com/amanmprojects/quick-gateway && cd quick-gateway
 ./install.sh            # prompts for OPENCODE_API_KEY (chmod-600), then asks
                         # to install the system service via sudo.
 ./install.sh --system   # same, without the service-install prompt (for scripts)
+./install.sh --help     # all flags: --api-key, --port, --dry-run, --force, --uninstall
 curl -s http://127.0.0.1:4000/v1/models | head -c 200   # sanity check
 ```
 
+Non-interactive / custom port:
+
+```bash
+QUICK_GATEWAY_PORT=5000 ./install.sh --api-key "$OPENCODE_API_KEY" --port 5000 --system
+./install.sh --dry-run --port 5000   # preview without writing
+```
+
 Requires nothing but `curl` — Python is provisioned by [uv](https://docs.astral.sh/uv/)
-(no distro packages). Idempotent: safe to re-run.
+(no distro packages). Idempotent: safe to re-run (backs up changed configs to `.bak`).
 
 ## Codex (on the VM)
 
@@ -40,6 +48,7 @@ touched:
 
 ```bash
 codex --profile quick-gateway
+# custom port: QUICK_GATEWAY_PORT=5000 ./install.sh --port 5000 (re-renders overlay)
 ```
 
 ## Laptop / remote Claude Code
@@ -51,6 +60,7 @@ One command from any laptop (needs only `ssh` + `curl`):
 clients/tunnel.sh <vm-host>            # open tunnel + verify gateway reachable
 clients/tunnel.sh <vm-host> --claude   # ...and install the claude-zen launcher
 clients/tunnel.sh --status             # just check reachability
+clients/tunnel.sh --help               # all flags + QUICK_GATEWAY_PORT
 ```
 
 or without cloning, straight off GitHub:
@@ -61,11 +71,13 @@ curl -fsSL https://raw.githubusercontent.com/amanmprojects/quick-gateway/master/
 ```
 
 `tunnel.sh` is idempotent: if :4000 already answers locally it does nothing,
-otherwise it opens `ssh -fN -L 4000:127.0.0.1:4000 <vm-host>` and re-checks.
+otherwise it opens `ssh -fN -L 127.0.0.1:4000:127.0.0.1:4000 <vm-host>` (explicit
+loopback bind, retry health check 8×0.5s) and re-checks.
 
 1. Install the launcher (idempotent; needs python3 + Claude Code):
    ```bash
-   ./clients/install-claude-zen.sh
+   ./clients/install-claude-zen.sh            # --help, --force to regenerate
+   QUICK_GATEWAY_PORT=5000 ./clients/install-claude-zen.sh --force
    ```
 2. Launch: `claude-zen` — a full Claude Code session on `ox-alpha-free`
    (or any gateway model via `claude-zen --model kimi-k3`). The profile is
@@ -101,14 +113,18 @@ Not routed here (already natively compatible elsewhere):
 ## Troubleshooting
 
 - **`litellm` crashes importing `proxy_server`**: the repo pins
-  `fastapi==0.136.3` because litellm 1.97.x imports FastAPI APIs removed in
-  newer releases (its own declared floor). If you bump litellm, revisit the pin
-  in `install.sh`.
-- **Port 4000 busy**: change `--port` in the unit template and the clients'
-  base URLs together.
-- **Key rotation**: edit `~/.config/quick-gateway/gateway.env`, then
-  `sudo systemctl restart quick-gateway`. Clients need no changes.
-- **Gateway logs**: `journalctl -u quick-gateway` (system service).
+  `litellm[proxy]==1.97.*` and `fastapi==0.136.3` because litellm 1.97.x imports
+  FastAPI APIs removed in newer releases (its own declared floor). If you bump
+  litellm, revisit the pin in `install.sh` and run `python -c "from litellm.proxy import proxy_server"`.
+- **Port 4000 busy**: `QUICK_GATEWAY_PORT=5000 ./install.sh --port 5000` re-renders
+  the unit and codex overlay; `QUICK_GATEWAY_PORT=5000 ./clients/install-claude-zen.sh --force`
+  and `QUICK_GATEWAY_PORT=5000 clients/tunnel.sh <host>` for clients. The unit
+  template uses `__PORT__` placeholder.
+- **Key rotation**: `install.sh --api-key "$NEW_KEY"` or edit
+  `~/.config/quick-gateway/gateway.env`, then `sudo systemctl restart quick-gateway`. Clients need no changes.
+- **Uninstall**: `./install.sh --uninstall` (also `sudo rm` for system unit), or
+  `./install.sh --dry-run --uninstall` to preview.
+- **Gateway logs**: `journalctl -u quick-gateway -f` (system service).
 - **Empty responses from `claude-zen`**: Claude Code always sends its tool
   list, so a model that chokes on `tools` fails only under Claude Code while
   plain text requests succeed. If a Zen backend regresses to this (symptom:
@@ -125,9 +141,11 @@ Not routed here (already natively compatible elsewhere):
 
 ```
 install.sh                        idempotent installer (uv-native)
-gateway/config.yaml               LiteLLM model catalog
-gateway/quick-gateway.service.template   systemd unit (__USER__/__HOME__ rendered)
+gateway/config.yaml               LiteLLM model catalog (YAML anchors, 18 models)
+gateway/quick-gateway.service.template   systemd unit (__USER__/__HOME__/__PORT__ rendered, hardened)
 clients/codex-quick-gateway.config.toml  codex profile overlay
-clients/install-claude-zen.sh            Claude Code launcher installer
+clients/install-claude-zen.sh            Claude Code launcher installer (--settings wrapper)
 clients/tunnel.sh                        laptop one-command SSH tunnel + reachability check
+.github/workflows/lint.yml        CI: shellcheck, yaml, dry-run
+LICENSE                           MIT
 ```
