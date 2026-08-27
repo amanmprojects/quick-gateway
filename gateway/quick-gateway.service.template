@@ -10,9 +10,24 @@ User=__USER__
 EnvironmentFile=__HOME__/.config/quick-gateway/gateway.env
 ExecStart=__HOME__/.local/share/quick-gateway/venv/bin/litellm --config __HOME__/.config/quick-gateway/config.yaml --host 127.0.0.1 --port 4000
 Restart=on-failure
-RestartSec=3
+RestartSec=5
+TimeoutStopSec=10
 NoNewPrivileges=true
 PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=__HOME__/.config/quick-gateway __HOME__/.local/share/quick-gateway
+PrivateDevices=true
+ProtectClock=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+MemoryMax=512M
+LimitNOFILE=65536
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=quick-gateway
 
 [Install]
 WantedBy=multi-user.target
