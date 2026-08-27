@@ -1,4 +1,17 @@
+# Runtime artifacts (local, not in repo)
 litellm.pid
 *.pid
 litellm.log
+*.log
 *.env
+*.bak
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.env
+.DS_Store
+# Mirrors install.sh secrets location (server-side only)
+# ~/.config/quick-gateway/gateway.env is never in repo, but ignore any stray
+*.env.bak
