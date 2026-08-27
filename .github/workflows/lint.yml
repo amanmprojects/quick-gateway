@@ -1,0 +1,98 @@
+name: lint
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bash syntax check
+        run: |
+          set -e
+          for f in install.sh clients/*.sh; do
+            echo "checking $f"
+            bash -n "$f"
+          done
+
+      - name: ShellCheck (if available)
+        run: |
+          if command -v shellcheck >/dev/null 2>&1; then
+            shellcheck install.sh clients/*.sh
+          else
+            echo "shellcheck not installed, skipping (install via apt for local check)"
+          fi
+
+      - name: Validate gateway config YAML
+        run: |
+          python3 -c "import yaml, sys; yaml.safe_load(open('gateway/config.yaml')); print('gateway/config.yaml ok')"
+          python3 -c "
+          import yaml
+          data=yaml.safe_load(open('gateway/config.yaml'))
+          assert 'model_list' in data, 'missing model_list'
+          assert len(data['model_list']) == 18, f\"expected 18 models, got {len(data['model_list'])}\"
+          for m in data['model_list']:
+              assert 'use_chat_completions_api' in m['litellm_params'], f\"missing flag in {m['model_name']}\"
+          print(f\"model count: {len(data['model_list'])} ok\")
+          "
+
+      - name: Validate systemd template
+        run: |
+          # Render with dummy values and check basic structure
+          python3 - << 'PY'
+          src="gateway/quick-gateway.service.template"
+          data=open(src).read()
+          for ph in ["__USER__", "__HOME__", "__PORT__"]:
+              assert ph in data, f"missing placeholder {ph}"
+          print("service template placeholders ok")
+          # Try systemd-analyze verify if available (render first)
+          import subprocess, sys
+          rendered=data.replace("__USER__","test").replace("__HOME__","/home/test").replace("__PORT__","4000")
+          open("/tmp/qg.service","w").write(rendered)
+          try:
+              subprocess.run(["systemd-analyze","verify","/tmp/qg.service"], check=False)
+              print("systemd-analyze verify ran (check output above)")
+          except FileNotFoundError:
+              print("systemd-analyze not available, skipping")
+          PY
+
+      - name: Validate TOML (codex overlay)
+        run: |
+          python3 - << 'PY'
+          try:
+              import tomllib
+          except ImportError:
+              import tomli as tomllib
+          data=open("clients/codex-quick-gateway.config.toml","rb").read()
+          # tomllib needs binary
+          try:
+              import tomllib
+              tomllib.load(open("clients/codex-quick-gateway.config.toml","rb"))
+          except ImportError:
+              print("tomllib not available, skipping strict TOML parse")
+          else:
+              print("codex TOML ok")
+          PY
+
+      - name: Check install scripts --help
+        run: |
+          ./install.sh --help >/dev/null
+          ./clients/tunnel.sh --help >/dev/null
+          ./clients/install-claude-zen.sh --help >/dev/null
+          echo "all --help ok"
+
+      - name: Dry-run installer (isolated HOME)
+        run: |
+          TMPHOME=$(mktemp -d)
+          HOME="$TMPHOME" ./install.sh --dry-run --api-key dummy12345678 --port 4000
+          echo "dry-run ok"
+          rm -rf "$TMPHOME"
